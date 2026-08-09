@@ -1,10 +1,18 @@
 from django.contrib.auth import authenticate, get_user_model
+from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .serializers import LoginSerializer, RegisterSerializer
+from .models import PriceAlert
+from .serializers import (
+    LoginSerializer,
+    PriceAlertCreateSerializer,
+    PriceAlertSerializer,
+    RegisterSerializer,
+)
 
 User = get_user_model()
 
@@ -74,3 +82,50 @@ class LoginView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class PriceAlertListCreateView(APIView):
+    """List and create price alerts for the authenticated user only."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return PriceAlert.objects.filter(user=self.request.user).order_by(
+            '-created_at'
+        )
+
+    def get(self, request):
+        serializer = PriceAlertSerializer(self.get_queryset(), many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = PriceAlertCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        alert = PriceAlert.objects.create(
+            user=request.user,
+            origin=serializer.validated_data['origin'],
+            destination=serializer.validated_data['destination'],
+            threshold_price=serializer.validated_data['threshold_price'],
+        )
+        return Response(
+            PriceAlertSerializer(alert).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class PriceAlertDeactivateView(APIView):
+    """Soft-deactivate an alert (INACTIVE). Does not delete the row."""
+
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, id):
+        alert = get_object_or_404(PriceAlert, id=id)
+        # Hide existence of other users' alerts
+        if alert.user != request.user:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        alert.status = PriceAlert.Status.INACTIVE
+        alert.save(update_fields=['status'])
+        return Response({'status': 'inactive'}, status=status.HTTP_200_OK)

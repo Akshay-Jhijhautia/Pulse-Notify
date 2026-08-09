@@ -5,6 +5,7 @@ from .views import (
     PriceAlertDeactivateView,
     PriceAlertListCreateView,
     RegisterView,
+    get_flight_price,
 )
 
 urlpatterns = [
@@ -16,4 +17,5 @@ urlpatterns = [
         PriceAlertDeactivateView.as_view(),
         name='alert-deactivate',
     ),
+    path('flights/price/', get_flight_price, name='flight-price'),
 ]

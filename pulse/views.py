@@ -129,3 +129,31 @@ class PriceAlertDeactivateView(APIView):
         alert.status = PriceAlert.Status.INACTIVE
         alert.save(update_fields=['status'])
         return Response({'status': 'inactive'}, status=status.HTTP_200_OK)
+
+
+MOCK_PRICES = {
+    'DEL-BOM': (3000, 7000),
+    'BLR-HYD': (1500, 4000),
+    'DEL-BLR': (4000, 9000),
+    'BOM-GOA': (2000, 5000),
+}
+
+
+def get_flight_price(request):
+    """
+    Internal mock price feed.
+
+    Celery tasks will call this with requests.get() — same pattern as a
+    real external flight API, but fully under our control.
+    """
+    import random
+
+    from django.http import JsonResponse
+
+    route = request.GET.get('route', '')
+    price_range = MOCK_PRICES.get(route)
+    if not price_range:
+        return JsonResponse({'error': 'Route not found'}, status=404)
+
+    price = random.randint(*price_range)
+    return JsonResponse({'route': route, 'price': price})

@@ -3,6 +3,10 @@ from .base import *  # noqa: F401, F403
 
 DEBUG = True
 
+# Django's test client uses Host: testserver
+if 'testserver' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS = [*ALLOWED_HOSTS, 'testserver']
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',

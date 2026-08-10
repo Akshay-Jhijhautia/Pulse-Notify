@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    AdminSummaryView,
     LoginView,
     PriceAlertDeactivateView,
     PriceAlertListCreateView,
@@ -18,4 +19,5 @@ urlpatterns = [
         name='alert-deactivate',
     ),
     path('flights/price/', get_flight_price, name='flight-price'),
+    path('admin/summary/', AdminSummaryView.as_view(), name='admin-summary'),
 ]

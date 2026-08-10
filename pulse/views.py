@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate, get_user_model
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -6,7 +7,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import PriceAlert
+from .models import NotificationLog, PriceAlert
+from .permissions import IsAdminUser
 from .serializers import (
     LoginSerializer,
     PriceAlertCreateSerializer,
@@ -157,3 +159,45 @@ def get_flight_price(request):
 
     price = random.randint(*price_range)
     return JsonResponse({'route': route, 'price': price})
+
+
+class AdminSummaryView(APIView):
+    """Platform-wide alert/notification stats — admin role only."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        alert_stats = PriceAlert.objects.aggregate(
+            total_alerts=Count('id'),
+            active_alerts=Count('id', filter=Q(status=PriceAlert.Status.ACTIVE)),
+            triggered_alerts=Count(
+                'id',
+                filter=Q(status=PriceAlert.Status.TRIGGERED),
+            ),
+        )
+        notification_stats = NotificationLog.objects.aggregate(
+            total_notifications=Count('id'),
+        )
+        top_routes_qs = (
+            PriceAlert.objects.values('origin', 'destination')
+            .annotate(alert_count=Count('id'))
+            .order_by('-alert_count')[:5]
+        )
+        top_routes = [
+            {
+                'route': f"{row['origin']}-{row['destination']}",
+                'alert_count': row['alert_count'],
+            }
+            for row in top_routes_qs
+        ]
+
+        return Response(
+            {
+                'total_alerts': alert_stats['total_alerts'],
+                'active_alerts': alert_stats['active_alerts'],
+                'triggered_alerts': alert_stats['triggered_alerts'],
+                'total_notifications': notification_stats['total_notifications'],
+                'top_routes': top_routes,
+            },
+            status=status.HTTP_200_OK,
+        )

@@ -1,0 +1,195 @@
+{
+  "info": {
+    "name": "PulseNotify API",
+    "description": "Postman collection for PulseNotify — 13 required API scenarios.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000" },
+    { "key": "access_token", "value": "" },
+    { "key": "admin_access_token", "value": "" },
+    { "key": "alert_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "01 Register — success",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 201', function () { pm.response.to.have.status(201); });",
+              "var json = pm.response.json();",
+              "pm.collectionVariables.set('access_token', json.access);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"securepass\",\n  \"email\": \"alice@example.com\"\n}"
+        },
+        "url": "{{base_url}}/api/auth/register/"
+      }
+    },
+    {
+      "name": "02 Register — duplicate username (400)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"securepass\",\n  \"email\": \"alice@example.com\"\n}"
+        },
+        "url": "{{base_url}}/api/auth/register/"
+      }
+    },
+    {
+      "name": "03 Login — success",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "var json = pm.response.json();",
+              "pm.collectionVariables.set('access_token', json.access);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"securepass\"\n}"
+        },
+        "url": "{{base_url}}/api/auth/login/"
+      }
+    },
+    {
+      "name": "04 Login — invalid credentials (401)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"wrongpassword\"\n}"
+        },
+        "url": "{{base_url}}/api/auth/login/"
+      }
+    },
+    {
+      "name": "05 Create alert — success",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 201', function () { pm.response.to.have.status(201); });",
+              "var json = pm.response.json();",
+              "pm.collectionVariables.set('alert_id', json.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origin\": \"DEL\",\n  \"destination\": \"BOM\",\n  \"threshold_price\": \"4500.00\"\n}"
+        },
+        "url": "{{base_url}}/api/alerts/"
+      }
+    },
+    {
+      "name": "06 Create alert — unauthenticated (401)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origin\": \"DEL\",\n  \"destination\": \"BOM\",\n  \"threshold_price\": \"4500.00\"\n}"
+        },
+        "url": "{{base_url}}/api/alerts/"
+      }
+    },
+    {
+      "name": "07 List alerts — own alerts only",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "url": "{{base_url}}/api/alerts/"
+      }
+    },
+    {
+      "name": "08 Deactivate alert — success",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "url": "{{base_url}}/api/alerts/{{alert_id}}/"
+      }
+    },
+    {
+      "name": "09 Deactivate alert — other user / missing (404)",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "url": "{{base_url}}/api/alerts/99999/"
+      }
+    },
+    {
+      "name": "10 Flight price — known route",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/flights/price/?route=DEL-BOM"
+      }
+    },
+    {
+      "name": "11 Flight price — unknown route (404)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/flights/price/?route=XXX-YYY"
+      }
+    },
+    {
+      "name": "12 Admin summary — regular user (403)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "url": "{{base_url}}/api/admin/summary/"
+      }
+    },
+    {
+      "name": "13 Admin summary — admin user (200)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+        ],
+        "url": "{{base_url}}/api/admin/summary/"
+      }
+    }
+  ]
+}

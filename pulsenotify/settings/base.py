@@ -106,4 +106,10 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
-# CELERY_BEAT_SCHEDULE is added in Feature 6
+
+CELERY_BEAT_SCHEDULE = {
+    'check-flight-prices-every-minute': {
+        'task': 'pulse.tasks.check_prices',
+        'schedule': 60.0,  # every 60 seconds
+    },
+}
